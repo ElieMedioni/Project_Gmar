@@ -24,8 +24,6 @@ if st.button("🧠 Générer un nouveau fichier d'embeddings"):
         except Exception as e:
             st.error(f"❌ Erreur lors de la génération des embeddings : {e}")
 
-
-
 uploaded_file = st.file_uploader(
     "Glissez ici un fichier Excel à traiter", type=["xlsx", "xlsm"]
 )
@@ -38,12 +36,19 @@ if uploaded_file:
         time.sleep(0.5)
 
         # On crée un fichier temporaire avec suffixe .xlsx
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+        uploaded_ext = os.path.splitext(uploaded_file.name)[1].lower()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=uploaded_ext) as tmp:
             tmp.write(uploaded_file.read())
             temp_input_path = tmp.name
 
         model = SentenceTransformer(MODEL_DIR_1)
         processor = TextProcessor(file_path_dictionnary)
+        
+         # ✅ Zone de log affichée dynamiquement
+        log_box = st.empty()
+
+        def stream_log(msg):
+            log_box.text(msg)
 
         try:
             start_time = time.time()
@@ -53,12 +58,14 @@ if uploaded_file:
                 file_path_takalot_file=temp_input_path,
                 embedding_model=model,
                 processor=processor,
-                reference_json=file_path_json
+                reference_json=file_path_json,
+                log_fn=stream_log  # 👈 Ajout du logger
+
             )
 
             progress.progress(90, text="💾 Sauvegarde du fichier modifié...")
 
-            final_path = "Data_Cabine/Output/fichier_modifie.xlsx"
+            final_path = f"Data_Cabine/Output/fichier_modifie{uploaded_ext}"
             os.makedirs(os.path.dirname(final_path), exist_ok=True)
             shutil.copy(temp_input_path, final_path)
 
