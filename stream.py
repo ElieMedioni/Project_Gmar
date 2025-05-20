@@ -9,8 +9,22 @@ from text_processing import TextProcessor
 from config import file_path_dictionnary, file_path_json, MODEL_DIR_1
 from sentenceT import process_new_descriptions
 
+from data_loader import CategoryEmbeddingBuilder
+from config import file_path_categories
+
 st.set_page_config(page_title="Classificateur Takalot", layout="centered")
 st.title("📋 Classificateur de défauts de Cabine")
+
+if st.button("🧠 Générer un nouveau fichier d'embeddings"):
+    with st.spinner("Génération des embeddings en cours..."):
+        try:
+            builder = CategoryEmbeddingBuilder(file_path_categories, MODEL_DIR_1)
+            builder.save_outputs()
+            st.success("✅ Embeddings créés avec succès et sauvegardés dans `embeddings.json`")
+        except Exception as e:
+            st.error(f"❌ Erreur lors de la génération des embeddings : {e}")
+
+
 
 uploaded_file = st.file_uploader(
     "Glissez ici un fichier Excel à traiter", type=["xlsx", "xlsm"]

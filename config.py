@@ -8,7 +8,7 @@ MODEL_DIR_1 = "Models/all-mpnet-base-v2"
 file_path_categories = os.path.join("Data_Cabine", "categories.xlsx")
 file_path_dictionnary = os.path.join("Data_Cabine", "dictionnary.xlsx")
 file_path_json = os.path.join("Data_Cabine", "embeddings.json")
-file_path_json_2 = os.path.join("Data_Cabine", "embeddings_2.json")
+#file_path_json_2 = os.path.join("Data_Cabine", "embeddings_2.json")
 
 file_path_excel = os.path.join("Data_Cabine", "embedding_text.xlsx")
 #file_path_takalot_file = os.path.join("Data_Cabine", "takalot_for_test.xlsx")
