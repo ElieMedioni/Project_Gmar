@@ -1,0 +1,716 @@
+data_loader
+    import openpyxl
+    import pandas as pd
+    from sentence_transformers import SentenceTransformer
+
+
+    class MainCategories:
+        def __init__(self, file_path):
+            self.file_path = file_path
+            self.wb = openpyxl.load_workbook(self.file_path, data_only=True)
+            self.sheet_name = "MAIN_CATEGORY"
+            self.categories_dict = {}
+            self.load_main_category_sheet()
+
+        def load_main_category_sheet(self):
+            if self.sheet_name not in self.wb.sheetnames:
+                raise ValueError(f"The sheet '{self.sheet_name}' doesn't exist.")
+
+            ws = self.wb[self.sheet_name]
+
+            ata_chapter = []
+            ata_chapter_desc = []
+            main_category = []
+
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                ata_chapter.append(row[0])  # Colonne A : ATA_CHAPTER
+                ata_chapter_desc.append(row[1])  # Colonne B : ATA_CHAPTER_DESC
+                main_category.append(row[2])  # Colonne C : MAIN_CATEGORY
+
+            self.categories_df = pd.DataFrame({
+                "ATA_CHAPTER": ata_chapter,
+                "ATA_CHAPTER_DESC": ata_chapter_desc,
+                "MAIN_CATEGORY": main_category
+            })
+
+        def get_main_category(self, description):
+            return self.categories_dict.get(description, {"ATA_CHAPTER": None, "MAIN_CATEGORY": "Category not found."})
+
+
+    class SubCategories:
+        def __init__(self, file_path, model_path):
+            self.file_path = file_path
+            self.model_path = model_path  # Chemin vers le modèle local
+            self.wb = openpyxl.load_workbook(self.file_path, data_only=True)
+            #self.sheet_names = [sheet for sheet in self.wb.sheetnames if sheet != "MAIN_CATEGORY"]
+            self.sheet_name = "Crew Area"
+            self.model = SentenceTransformer(self.model_path)  # Charger le modèle
+            self.sheets = self.load_sub_categories_sheets()
+
+        def load_sub_categories_sheets(self):        
+            structured_sheets = {}
+            ws = self.wb[self.sheet_name]
+
+            subcategories = []  
+            definitions = []
+            embeddings = []
+                
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row, values_only=True):
+                sub_category = row[0]  # Nom de la sous-catégorie
+                definition = row[1]  # Définition associée
+                
+                if sub_category and definition:
+                    text = f"{sub_category} : {definition}"  # Corrigé pour concaténer
+                    embedding = self.model.encode(text, normalize_embeddings=True)  # Corrigé
+                    subcategories.append(sub_category)
+                    definitions.append(definition)
+                    embeddings.append(embedding.tolist())  # Transformer en liste
+
+            # Création du DataFrame avec les sous-catégories et définitions
+            df = pd.DataFrame({
+                "Subcategories": subcategories,
+                "Definitions": definitions,
+                "Embeddings": embeddings
+            })
+            
+            structured_sheets[self.sheet_name] = df
+            return structured_sheets
+
+        def get_sheet(self, name):
+            return self.sheets.get(name)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    import openpyxl
+    import json
+    import pandas as pd
+    from config import file_path_categories
+
+    class CategoryMerger:
+        def __init__(self, file_path):
+            self.file_path = file_path
+            self.wb = openpyxl.load_workbook(self.file_path, data_only=True)
+            self.main_sheet = "Main_Categories"
+            self.sub_sheet = "Sub_Categories"
+            self.main_df = None
+            self.sub_df = None
+            self.merged_df = None
+
+        def load_main_categories(self):
+            ws = self.wb[self.main_sheet]
+            data = [(row[0], row[1]) for row in ws.iter_rows(min_row=2, values_only=True)]
+            self.main_df = pd.DataFrame(data, columns=["MAIN_CATEGORY", "CATEGORY_DEFINITION"])
+
+        def load_sub_categories(self):
+            ws = self.wb[self.sub_sheet]
+            data = [(row[0], row[1], row[2]) for row in ws.iter_rows(min_row=2, values_only=True)]
+            self.sub_df = pd.DataFrame(data, columns=["MAIN_CATEGORY", "SUB_CATEGORY", "SUBCATEGORY_DEFINITION"])
+
+        def merge_and_export(self):
+            self.merged_df = pd.merge(self.sub_df, self.main_df, on="MAIN_CATEGORY", how="left")
+
+            # Générer un dictionnaire avec clé = "MAIN_CATEGORY - SUB_CATEGORY"
+            result_dict = {
+                f"{row['MAIN_CATEGORY']} - {row['SUB_CATEGORY']}": {
+                    "CATEGORY_DEFINITION": row["CATEGORY_DEFINITION"],
+                    "SUBCATEGORY_DEFINITION": row["SUBCATEGORY_DEFINITION"]
+                }
+                for _, row in self.merged_df.iterrows()
+            }
+
+            # Sauvegarde au format JSON
+            with open("merged_categories.json", "w", encoding="utf-8") as f:
+                json.dump(result_dict, f, indent=4, ensure_ascii=False)
+
+            print("✅ Fichier JSON 'merged_categories.json' généré avec succès !")
+
+    if __name__ == "__main__":
+        merger = CategoryMerger(file_path_categories)
+        merger.load_main_categories()
+        merger.load_sub_categories()
+        merger.merge_and_export()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    import openpyxl
+    import json
+    import pandas as pd
+    from sentence_transformers import SentenceTransformer
+    from config import file_path_categories, MODEL_DIR  # Import du chemin du fichier Excel
+
+
+    class MainCategories:
+        def __init__(self, file_path):
+            self.file_path = file_path
+            self.wb = openpyxl.load_workbook(self.file_path, data_only=True)
+            self.sheet_name = "Main_Categories"
+            self.categories_dict = {}
+            self.load_main_category_sheet()
+
+        def load_main_category_sheet(self):
+            if self.sheet_name not in self.wb.sheetnames:
+                raise ValueError(f"The sheet '{self.sheet_name}' doesn't exist.")
+
+            ws = self.wb[self.sheet_name]
+
+            main_category = []
+            definitions = []
+
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                main_category.append(row[0])  # Colonne A : MAIN_CATEGORY
+                definitions.append(row[1])  # Colonne B : Definitions
+
+            self.main_categories_df = pd.DataFrame({
+                "MAIN_CATEGORIES": main_category,
+                "DEFINITIONS": definitions
+            })
+
+        def get_main_category(self, description):
+            return self.categories_dict.get(description, {"ATA_CHAPTER": None, "MAIN_CATEGORY": "Category not found."})
+
+
+    class SubCategories:
+        def __init__(self, file_path):
+            self.file_path = file_path
+            self.wb = openpyxl.load_workbook(self.file_path, data_only=True)
+            self.sheet_name = "Sub_categories"
+            self.model = SentenceTransformer(self.model_path)  # Charger le modèle
+            self.sheets = self.load_sub_categories_sheets()
+
+        def load_sub_categories_sheets(self):        
+            structured_sheets = {}
+
+            for sheet_name in self.sheet_names:  # Boucle sur toutes les feuilles sauf "MAIN_CATEGORY"
+                ws = self.wb[sheet_name]
+
+                subcategory_embeddings = {}
+
+                for row in ws.iter_rows(min_row=2, max_row=ws.max_row, values_only=True):
+                    sub_category = row[0]  # Nom de la sous-catégorie (clé JSON)
+                    definition = row[1]  # Définition associée
+                    
+                    if sub_category and definition:
+                        text = f"{sub_category} : {definition}"  # Concaténation de la description
+                        embedding = self.model.encode(text, normalize_embeddings=True).tolist()  # Génération du vecteur
+                        
+                        subcategory_embeddings[sub_category] = embedding  # Ajouter au JSON
+
+                # Création et enregistrement du fichier JSON
+                json_filename = f"data_cabine/{sheet_name}.json"
+                with open(json_filename, "w", encoding="utf-8") as json_file:
+                    json.dump(subcategory_embeddings, json_file, indent=4)
+
+                print(f"Fichier JSON créé : {json_filename}")
+
+                structured_sheets[sheet_name] = subcategory_embeddings  # Stocker les embeddings dans un dict
+            
+            return structured_sheets
+
+        def get_sheet(self, name):
+            return self.sheets.get(name)
+
+    if __name__ == "__main__":
+        subcategories = SubCategories(file_path_categories, MODEL_DIR)
+        print("c'est fait mon cochon")  # Afficher les embeddings pour une feuille spécifique
+
+SentenceT
+    import pandas as pd
+    import time
+    import threading
+
+    from sentence_transformers import SentenceTransformer
+
+    from data_loader import MainCategories, SubCategories
+    from config import MODEL_DIR, file_path_dictionnary, file_path_categories, new_desc_file, new_desc_sub_file
+    from text_processing import TextProcessor
+
+    def afficher_temps(stop_event, start_time):
+        while not stop_event.is_set():
+            elapsed_time = time.time() - start_time
+            print(f"\rTimes : {elapsed_time:.2f} s", end="", flush=True)
+            time.sleep(0.1)  # Rafraîchit toutes les 0.1 secondes
+        
+        
+    class ModelHandler:
+        def __init__(self, categories_file):
+            self.categories = MainCategories(categories_file)
+
+        def find_category(self, ata_chapter):
+            if self.categories.categories_df is None:
+                raise ValueError("Main categories data has not been loaded. Please check your file.")
+
+            # S'assurer que la colonne est bien en string
+            df = self.categories.categories_df.dropna(subset=["ATA_CHAPTER"])  # Supprime les valeurs NaN dans la colonne
+            result = df[df["ATA_CHAPTER"].astype(str) == str(ata_chapter)]
+
+            return result.iloc[0]["MAIN_CATEGORY"] if not result.empty else None
+
+
+    def process_new_desc_option1(new_desc_file, output_file, handler):
+        try:
+            new_desc = pd.read_excel(new_desc_file)
+            
+            for index, row in new_desc.iterrows():
+                ata_chapter = str(row["ATA_CHAPTER"])
+                wo_desc = str(row["Wo_Desc"])
+            
+                category = handler.find_category(ata_chapter)
+
+            
+            
+            
+            
+        
+        except Exception as e:
+            print(f"Error processing new descriptions: {str(e)}")
+
+
+
+
+    if __name__ == "__main__":
+        try:
+            start_time = time.time()
+            stop_event = threading.Event()  
+            
+            timer_thread = threading.Thread(target=afficher_temps, args=(stop_event, start_time))
+            timer_thread.start()
+            
+            #############################################################
+                    
+            
+            
+            #############################################################
+            
+            stop_event.set() 
+            timer_thread.join()
+            
+            end_time = time.time()
+            elapsed_time = end_time - start_time 
+            print(f"\nTotal times : {elapsed_time:.6f} seconds")
+            
+        except Exception as e:
+            print(f"Error in main execution: {str(e)}")
+
+
+
+    import pandas as pd
+    import time
+    import threading
+    import requests
+    import json
+    from data_loader import MainCategories, SubCategories
+    from config import file_path_categories, new_desc_file
+    from text_processing import TextProcessor
+
+    # Définir l'URL de l'API
+    API_URL = "http://localhost:5000/embed"
+
+    def afficher_temps(stop_event, start_time):
+        while not stop_event.is_set():
+            elapsed_time = time.time() - start_time
+            print(f"\rTemps écoulé : {elapsed_time:.2f} s", end="", flush=True)
+            time.sleep(0.1)
+
+    class ModelHandler:
+        def __init__(self, categories_file):
+            self.categories = MainCategories(categories_file)
+
+        def find_category(self, ata_chapter):
+            df = self.categories.categories_df.dropna(subset=["ATA_CHAPTER"])
+            result = df[df["ATA_CHAPTER"].astype(str) == str(ata_chapter)]
+            return result.iloc[0]["MAIN_CATEGORY"] if not result.empty else None
+
+    def get_embedding_from_api(text):
+        """Envoie un texte à l'API Flask et récupère son embedding."""
+        payload = {"text": text}
+        headers = {"Content-Type": "application/json"}
+        
+        try:
+            response = requests.post(API_URL, data=json.dumps(payload), headers=headers)
+            response.raise_for_status()  # Vérifier si l'API répond correctement
+            return response.json()["embedding"]
+        except requests.exceptions.RequestException as e:
+            print(f"Erreur lors de la requête API : {e}")
+            return None
+
+    def process_new_desc(new_desc_file, handler):
+        """Traite les nouvelles descriptions, génère leurs embeddings via l'API et les compare aux catégories."""
+        new_desc = pd.read_excel(new_desc_file)
+
+        results = []
+        for index, row in new_desc.iterrows():
+            ata_chapter = str(row["ATA_CHAPTER"])
+            wo_desc = str(row["Wo_Desc"])
+            category = handler.find_category(ata_chapter)
+
+            # Vérifier que la description n'est pas vide
+            if pd.isna(wo_desc) or not wo_desc.strip():
+                continue
+
+            # Récupérer l'embedding via l'API Flask
+            embedding = get_embedding_from_api(wo_desc)
+            if embedding is None:
+                print(f"⚠️ Impossible de générer l'embedding pour : {wo_desc}")
+                continue
+
+            # Sauvegarde du résultat
+            results.append({
+                "ATA_CHAPTER": ata_chapter,
+                "Wo_Desc": wo_desc,
+                "Category": category,
+                "Embedding": embedding
+            })
+
+            print(f"ATA {ata_chapter} => Catégorie: {category}")
+
+        # Sauvegarde dans un fichier Excel
+        df_results = pd.DataFrame(results)
+        df_results.to_excel("data_cabine/results.xlsx", index=False)
+        print("\n✅ Résultats sauvegardés dans 'data_cabine/results.xlsx'.")
+
+    if __name__ == "__main__":
+        try:
+            start_time = time.time()
+            stop_event = threading.Event()
+
+            # Lancer un timer
+            timer_thread = threading.Thread(target=afficher_temps, args=(stop_event, start_time))
+            timer_thread.start()
+
+            # Initialiser le gestionnaire de catégories
+            handler = ModelHandler(file_path_categories)
+
+            # Traiter les nouvelles descriptions avec l'API
+            process_new_desc(new_desc_file, handler)
+
+            stop_event.set()
+            timer_thread.join()
+
+            elapsed_time = time.time() - start_time
+            print(f"\nTemps total : {elapsed_time:.6f} secondes")
+
+        except Exception as e:
+            print(f"Erreur lors de l'exécution principale : {str(e)}")
+
+
+
+
+
+
+
+    import pandas as pd
+    import time
+    import threading
+    import json
+    import numpy as np
+    from sentence_transformers import SentenceTransformer
+    from scipy.spatial.distance import cosine, euclidean
+
+    from data_loader import MainCategories
+    from config import MODEL_DIR, file_path_categories, new_desc_file, new_desc_sub_file, file_path_dictionnary
+    from text_processing import TextProcessor
+
+    def afficher_temps(stop_event, start_time):
+        while not stop_event.is_set():
+            elapsed_time = time.time() - start_time
+            print(f"\rTemps écoulé : {elapsed_time:.2f} s", end="", flush=True)
+            time.sleep(0.1)
+
+    class ModelHandler:
+        """Gère la récupération des catégories principales."""
+        def __init__(self, categories_file):
+            self.categories = MainCategories(categories_file)
+
+        def find_category(self, ata_chapter):
+            """Trouve la catégorie associée à un chapitre ATA."""
+            df = self.categories.categories_df.dropna(subset=["ATA_CHAPTER"])
+            result = df[df["ATA_CHAPTER"].astype(str) == str(ata_chapter)]
+            return result.iloc[0]["MAIN_CATEGORY"] if not result.empty else None
+
+    def load_json_embeddings(category):
+        """Charge les embeddings des sous-catégories depuis un fichier JSON."""
+        json_path = f"data_cabine/{category}.json"
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            print(f"⚠️ Fichier JSON introuvable : {json_path}")
+            return None
+        except json.JSONDecodeError:
+            print(f"⚠️ Erreur de lecture du JSON : {json_path}")
+            return None
+
+    def find_closest_subcategory(new_embedding, subcategory_embeddings):
+        distances = {}
+
+        for subcat, emb in subcategory_embeddings.items():
+            try:
+                emb = np.array(emb)  # Conversion en numpy array
+                distance = euclidean(new_embedding, emb)
+                distances[subcat] = distance
+            except Exception as e:
+                print(f"⚠️ Erreur lors du calcul de distance pour {subcat}: {e}")
+                continue
+
+        if not distances:
+            return None, [], []
+
+        sorted_subcategories = sorted(distances.items(), key=lambda x: x[1])
+        best_match = sorted_subcategories[0]
+        top_2_matches = sorted_subcategories[:2]
+
+        return best_match[0], [x[0] for x in top_2_matches], [x[1] for x in top_2_matches]
+
+    """def find_closest_subcategory(new_embedding, subcategory_embeddings):
+        distances = {}
+        
+        for subcat, emb in subcategory_embeddings.items():
+            try:
+                emb = np.array(emb)  # Conversion en numpy array
+                distance = cosine(new_embedding, emb)
+                distances[subcat] = distance
+            except Exception as e:
+                print(f"⚠️ Erreur lors du calcul de distance pour {subcat}: {e}")
+                continue
+
+        if not distances:
+            return None, [], []
+
+        # Trier les distances en ordre croissant
+        sorted_subcategories = sorted(distances.items(), key=lambda x: x[1])
+
+        # Retourner les deux meilleures correspondances
+        best_match = sorted_subcategories[0]  # Meilleure correspondance
+        top_2_matches = sorted_subcategories[:2]  # Deux meilleures correspondances
+
+        return best_match[0], [x[0] for x in top_2_matches], [x[1] for x in top_2_matches]"""
+
+    def process_new_descriptions(new_desc_file, output_file, model, handler, text_processor):
+        new_desc = pd.read_excel(new_desc_file)
+
+        results = []
+        
+        for index, row in new_desc.iterrows():
+            ata_chapter = str(row["ATA_CHAPTER"])
+            wo_desc = str(row["Wo_Desc"])
+
+            # Nettoyer la description
+            cleaned_desc = text_processor.clean_text(wo_desc)
+
+            # Trouver la catégorie principale
+            category = handler.find_category(ata_chapter)
+            if category is None:
+                print(f"⚠️ Catégorie introuvable pour ATA {ata_chapter}")
+                continue
+            
+            # Charger les embeddings des sous-catégories depuis le JSON
+            subcategory_embeddings = load_json_embeddings(category)
+            if not subcategory_embeddings:
+                print(f"⚠️ Aucun embedding trouvé pour la catégorie {category}")
+                continue
+
+            # Vectoriser la nouvelle description
+            new_embedding = model.encode(cleaned_desc, normalize_embeddings=True)
+
+            # Trouver la sous-catégorie la plus proche
+            best_subcat, top_2_subcats, distances = find_closest_subcategory(new_embedding, subcategory_embeddings)
+
+            if not best_subcat:
+                print(f"⚠️ Aucune correspondance trouvée pour '{cleaned_desc}'")
+                continue
+
+            # Sauvegarde du résultat
+            results.append({
+                "Description Nettoyée": cleaned_desc,
+                "Sous-catégorie la plus proche": best_subcat,
+                "Deux sous-catégories les plus proches": ", ".join(top_2_subcats),
+                "Distances": ", ".join([f"{d:.4f}" for d in distances])
+            })
+            
+        # Enregistrement du fichier Excel
+        df_results = pd.DataFrame(results)
+        df_results.to_excel(output_file, index=False)
+        print(f"\nRésultats sauvegardés dans {output_file}")
+
+    if __name__ == "__main__":
+        try:
+            start_time = time.time()
+            stop_event = threading.Event()
+
+            timer_thread = threading.Thread(target=afficher_temps, args=(stop_event, start_time))
+            timer_thread.start()
+            
+            #############################################################
+            
+            # Initialiser les composants
+            model = SentenceTransformer(MODEL_DIR)
+            text_processor = TextProcessor(file_path_dictionnary)  # Correction pour charger le bon fichier
+            handler = ModelHandler(file_path_categories)
+
+            # Traiter les nouvelles descriptions
+            process_new_descriptions(new_desc_file, new_desc_sub_file, model, handler, text_processor)
+            
+            #############################################################
+
+            stop_event.set()
+            timer_thread.join()
+
+            elapsed_time = time.time() - start_time
+            print(f"\nTemps total : {elapsed_time:.6f} secondes")
+
+        except Exception as e:
+            print(f"❌ Erreur lors de l'exécution principale : {str(e)}")
+
+        """import pandas as pd
+    import numpy as np
+    import json
+    import time
+    import threading
+    from sentence_transformers import SentenceTransformer
+    from config import file_path_dictionnary, file_path_json, MODEL_DIR
+    from text_processing import TextProcessor
+
+
+    def afficher_temps(stop_event, start_time):
+        while not stop_event.is_set():
+            elapsed_time = time.time() - start_time
+            print(f"\rTemps écoulé : {elapsed_time:.2f} s", end="", flush=True)
+            time.sleep(0.1)
+
+
+    def load_embeddings_from_json(json_path):
+        with open(json_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+
+    def find_top_matches(new_embedding, reference_embeddings, top_n=2):
+        distances = {}
+        for key, emb in reference_embeddings.items():
+            try:
+                emb_array = np.array(emb)
+                dist = np.linalg.norm(new_embedding - emb_array)
+                distances[key] = dist
+            except Exception as e:
+                print(f"Erreur distance avec {key}: {e}")
+        sorted_matches = sorted(distances.items(), key=lambda x: x[1])[:top_n]
+        return sorted_matches
+
+
+    def process_crew_area_descriptions(crew_file, output_file, embedding_model, processor, reference_json):
+        # Charger les descriptions (1 colonne sans en-tête)
+        df = pd.read_excel(crew_file, header=None, names=["RAW_DESCRIPTION"])
+        reference_embeddings = load_embeddings_from_json(reference_json)
+
+        results = []
+
+        for desc in df["RAW_DESCRIPTION"]:
+            cleaned = processor.clean_text(str(desc))
+            embedding = embedding_model.encode(cleaned, normalize_embeddings=True)
+
+            top_matches = find_top_matches(embedding, reference_embeddings)
+
+            result = {
+                "CLEANED_DESCRIPTION": cleaned,
+                "BEST_MATCH_1": top_matches[0][0] if len(top_matches) > 0 else "",
+                "BEST_MATCH_2": top_matches[1][0] if len(top_matches) > 1 else "",
+                "DISTANCE_1": round(top_matches[0][1], 4) if len(top_matches) > 0 else "",
+                "DISTANCE_2": round(top_matches[1][1], 4) if len(top_matches) > 1 else "",
+            }
+
+            results.append(result)
+
+        # Export
+        pd.DataFrame(results).to_excel(output_file, index=False)
+        print(f"\n✅ Résultat enregistré dans {output_file}")
+
+
+    if __name__ == "__main__":
+        try:
+            start_time = time.time()
+            stop_event = threading.Event()
+            timer_thread = threading.Thread(target=afficher_temps, args=(stop_event, start_time))
+            timer_thread.start()
+
+            model = SentenceTransformer(MODEL_DIR)
+            processor = TextProcessor(file_path_dictionnary)
+            process_crew_area_descriptions(
+                crew_file="data_cabine/takalot_for_test.xlsx",
+                output_file="data_cabine/takalot_for_test_sub.xlsx",
+                embedding_model=model,
+                processor=processor,
+                reference_json = file_path_json)
+
+            stop_event.set()
+            timer_thread.join()
+            print(f"Temps total : {time.time() - start_time:.2f} s")
+
+        except Exception as e:
+            print(f"❌ Erreur : {e}")"""

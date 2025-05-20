@@ -13,20 +13,10 @@ print(f"Le modèle est enregistré dans : {MODEL_DIR_2}")"""
 import os
 from sentence_transformers import SentenceTransformer
 
-# Dictionnaire des modèles à télécharger
-models = {
-    "all-mpnet-base-v2": "sentence-transformers/all-mpnet-base-v2",
-   # "all-MiniLM-L6-v2": "sentence-transformers/paraphrase-MiniLM-L6-v2"
-}
+from config import MODEL_DIR_1
 
-for local_dir, model_name in models.items():
-    print(f"Téléchargement de {model_name} vers {local_dir}...")
+os.makedirs(MODEL_DIR_1, exist_ok=True)
 
-    # Crée le dossier si besoin
-    os.makedirs(local_dir, exist_ok=True)
+model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", cache_folder=MODEL_DIR_1)
 
-    # Télécharge et sauvegarde dans le dossier local
-    model = SentenceTransformer(model_name)
-    model.save(local_dir)
-
-    print(f"✅ {model_name} sauvegardé avec succès dans ./{local_dir}\n")
+print(f"Le modèle est enregistré dans : {MODEL_DIR_1}")
