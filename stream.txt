@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from datetime import datetime
 import tempfile
 import shutil
@@ -14,24 +13,24 @@ from sentenceT import process_new_descriptions
 from data_loader import CategoryEmbeddingBuilder
 from config import file_path_categories
 
-st.set_page_config(page_title="סיווג תקלות קבינה", layout="centered")
+st.set_page_config(page_title="סיווג תקלות קבינה", layout="wide")
 
 st.markdown("""
-    <style>
-        .block-container {
-            padding-top: 1rem !important;
-        }
-    </style>
+<style>
+    html, body, [class*="css"]  {
+        font-family: 'David' !important;
+    }
+</style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align: center; direction: rtl; font-family: \"Segoe UI\"; font-weight: bold;'>סיווג תקלות קבינה </h1><br>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; direction: rtl;'> סיווג תקלות קבינה</h1>", unsafe_allow_html=True)
 
 ##########################################################################
 #BOUTTON NOUVEAUX VECTEURS
 
 col1, col2, col3 = st.columns([1, 1, 1])
-with col3:
-    if st.button("צור וקטורי ייחוס חדשים"):
+with col2:
+    if st.button("🧠 צור וקטורי ייחוס חדשים"):
         with col1:
             with st.spinner("...יצירת וקטורי ייחוס חדשים"):
                 try:
@@ -46,7 +45,7 @@ with col3:
 
 def generate_unique_filename(base_path, base_name="סיווג", ext=".xlsx"):
     # Obtenir la date du jour au format dd-mm-yyyy
-    date_str = datetime.now().strftime("%d.%m.%Y")
+    date_str = datetime.now().strftime("%d/%m/%Y")
     base_filename = f"{base_name}_{date_str}"
 
     i = 0
@@ -61,18 +60,15 @@ def generate_unique_filename(base_path, base_name="סיווג", ext=".xlsx"):
 ##########################################################################
 #BOUTTON
 
-st.markdown("<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\"'>בחר קובץ אקסל כאן כדי לסווג אותו</div>", unsafe_allow_html=True)
-uploaded_file = st.file_uploader(label="", type=["xlsx", "xlsm"])
+uploaded_file = st.file_uploader(
+    "בוחר קובץ אקסל כאן כדי לסווג אותו", type=["xlsx", "xlsm"]
+)
 
 if uploaded_file:
     st.success(f"{uploaded_file.name} : הקובץ התקבל בהצלחה")
 
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col3:
-        run = st.button("🚀 לההריץ את המודל")
-
-    if run:
-        st.markdown("<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\"; font-weight: bold;'>התחול של הסיווג</div>", unsafe_allow_html=True)
+    if st.button("🚀 לההריץ את המודל"):
+        st.markdown("<div dir='rtl' style='font-weight:bold;'>התחול של הסיווג...</div>", unsafe_allow_html=True)
         time.sleep(0.5)
 
         # 🧠 Déduire l'extension du fichier original (.xlsx ou .xlsm)
@@ -91,16 +87,12 @@ if uploaded_file:
             try: 
                 
                 start_time = time.time()
-                st.markdown("<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\"; font-weight: bold;'>מריץ את המודל ומזהה תקלות</div>", unsafe_allow_html=True)
+                st.markdown("<div dir='rtl' style='font-weight:bold;'>מריץ את המודל ומזהה תקלות...</div>", unsafe_allow_html=True)
                 
                 log_box = st.empty()
 
                 def stream_log(msg):
-                    log_box.markdown(
-                        f"<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\";'>{msg}</div>",
-                        unsafe_allow_html=True
-                    )
-
+                    log_box.text(msg)
 
                 # 🔁 Traitement du fichier
                 process_new_descriptions(
@@ -111,30 +103,21 @@ if uploaded_file:
                     log_fn=stream_log
                 )
 
-                st.markdown("<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\";font-weight: bold;'>שמירת של התקלות מסווגות</div>", unsafe_allow_html=True)
+                st.markdown("<div dir='rtl' style='font-weight:bold;'...שמירת של התקלות מסווגות</div>")
                 output_dir = "Data_Cabine/Output"
                 os.makedirs(output_dir, exist_ok=True)
                 final_path = generate_unique_filename(output_dir)
                 os.makedirs(os.path.dirname(final_path), exist_ok=True)
                 shutil.copy(local_path, final_path)
-                
-                st.markdown("<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\";font-weight: bold;'>✅ !סיימנו</div>", unsafe_allow_html=True)
-                st.markdown("*****")
+
+                st.markdown("***✅ !סיימנו***")
                 elapsed = time.time() - start_time
                 
                 st.markdown(f"""
-                <div dir='rtl' style='
-                    border: 2px solid #2ecc71;
-                    padding: 12px;
-                    border-radius: 8px;
-                    font-family: "Segoe UI";
-                    color: black;
-                    font-weight: bold;
-                '>
+                <div dir='rtl' style='background-color:#dff0d8; padding:10px; border-radius:8px;'>
                 🎉 הסיווג הושלם תוך {elapsed:.2f} שניות.<br>
                 📁 הקובץ נשמר בהצלחה בשם: <b>{os.path.basename(final_path)}</b>
-                </div>
-                """, unsafe_allow_html=True)
+                </div>""", unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"❌ {e} : שגיאה מסוג")

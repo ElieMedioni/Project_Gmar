@@ -13,7 +13,7 @@ def load_embeddings_from_json(json_path):
 
 def process_new_descriptions(file_path_takalot_file, embedding_model, processor, reference_json, log_fn=print):
     
-    log_fn("🧽 Nettoyage du fichier Excel d'origine...")
+    log_fn("ניקוי של הקובץ אקסל מקורי...")
 
     # 1. Charger le fichier d'origine en mode valeur uniquement
     wb_src = load_workbook(file_path_takalot_file, data_only=True)
@@ -34,13 +34,10 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
 
     # 6. Sauvegarder le fichier nettoyé
     wb_clean.save(file_path_takalot_file)
-    log_fn(f"✅ Fichier nettoyé sauvegardé dans : {file_path_takalot_file}")
 
     # 7. Recharger ce fichier nettoyé pour traitement
-    log_fn("📂 Ouverture du fichier Excel nettoyé...")
     wb = load_workbook(file_path_takalot_file)
     ws = wb.active
-    log_fn(f"✅ Accès à la feuille : {ws.title}")
 
     # 🔍 Recherche de la cellule contenant "WO Desc"
     desc_cell = None
@@ -54,20 +51,15 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
             break
 
     if not desc_cell:
-        log_fn("❌ Header 'WO Desc' not found")
+        log_fn("❌ הכותרות לא נמצאו")
         return
-
-    log_fn(f"🔎 'WO Desc' found in {desc_cell.coordinate}")
 
     if desc_cell.row > 1:
         ws.delete_rows(1, desc_cell.row - 1)
-        log_fn(f"🧹 Lignes supprimées au-dessus de {desc_cell.coordinate}")
         desc_cell = ws.cell(row=1, column=desc_cell.column)
 
     if ws.cell(row=1, column=1).value is None or str(ws.cell(row=1, column=1).value).strip() == "":
         ws.delete_cols(1)
-        log_fn("🧹 Première colonne supprimée car vide")
-
 
     # 🔍 Recherche des colonnes Main/Sub Category
     main_cell = None
@@ -92,14 +84,14 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
         if value is not None and str(value).strip():
             descriptions.append(str(value))
             row_indexes.append(row)
-            log_fn(f"📖 Ligne {row} lue")
+            log_fn(f"שורות שנקראו : {row}")
         else:
             break  # on s'arrête dès la première ligne vide
 
-    log_fn("🧼 Nettoyage des descriptions...")
+    log_fn("ניקוי של התיאורים עבור כל תקלה...")
     cleaned = [processor.clean_text(text) for text in descriptions]
 
-    log_fn("🔍 Génération des embeddings...")
+    log_fn("יצירת וקטורים עבור כל תקלה...")
     takalot_embeddings = embedding_model.encode(
         cleaned,
         normalize_embeddings=True,
@@ -107,19 +99,17 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
         batch_size=32
     )
     
-    log_fn("📥 Chargement des embeddings de référence...")
+    log_fn("טעינה של וקטורי ייחוס...")
     reference_embeddings = load_embeddings_from_json(reference_json)
     ref_keys = list(reference_embeddings.keys())
     ref_matrix = np.array([reference_embeddings[k] for k in ref_keys])
 
-    log_fn("📏 Calcul des distances (euclidean)...")
+    log_fn("חישוב של המרחק בין הוקטורים...")
     dist_matrix = cdist(takalot_embeddings, ref_matrix, metric="euclidean")
     top_1_idx = np.argmin(dist_matrix, axis=1)
         
         
-    log_fn("✏️ Écriture des résultats dans le fichier Excel...")
-    progress_bar = st.progress(0)
-
+    log_fn("קתיבת של הקטגוריות ותתי קטגוריות...")
     for i, row_num in enumerate(row_indexes):
         best = ref_keys[top_1_idx[i]]
         cat_1, subcat_1 = best.split(" | ")
@@ -127,11 +117,4 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
         ws.cell(row=row_num, column=main_cell.column).value = cat_1
         ws.cell(row=row_num, column=sub_cell.column).value = subcat_1
 
-        progress_percent = int((i + 1) / len(row_indexes) * 100)
-        progress_bar.progress(progress_percent)
-
-    # 🧹 Supprimer la barre à la fin
-    progress_bar.empty()
-
-    log_fn("💾 Sauvegarde du fichier...")
     wb.save(file_path_takalot_file)
