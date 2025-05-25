@@ -118,7 +118,7 @@ if uploaded_file:
                 os.makedirs(os.path.dirname(final_path), exist_ok=True)
                 shutil.copy(local_path, final_path)
                 
-                st.markdown("<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\";font-weight: bold;'>✅ !סיימנו</div>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\";font-weight: bold;'>סיימנו✅ !</div>", unsafe_allow_html=True)
                 st.markdown("*****")
                 elapsed = time.time() - start_time
                 
