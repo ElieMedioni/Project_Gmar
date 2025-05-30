@@ -4,8 +4,6 @@ import json
 from scipy.spatial.distance import cdist
 import datetime
 
-import streamlit as st
-
 
 def load_embeddings_from_json(json_path):
     with open(json_path, "r", encoding="utf-8") as f:
