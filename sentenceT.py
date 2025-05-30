@@ -4,12 +4,14 @@ import json
 from scipy.spatial.distance import cdist
 import datetime
 
+import pandas as pd
+
 
 def load_embeddings_from_json(json_path):
     with open(json_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def process_new_descriptions(file_path_takalot_file, embedding_model, processor, reference_json, log_fn=print):
+def process_new_descriptions(file_path_takalot_file, embedding_model, processor, ata, reference_json, log_fn=print):
     
     log_fn("ניקוי של הקובץ אקסל מקורי...")
 
@@ -36,6 +38,19 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
     # 7. Recharger ce fichier nettoyé pour traitement
     wb = load_workbook(file_path_takalot_file)
     ws = wb.active
+    
+
+    # Charger le fichier ATA
+    ata_df = pd.read_excel(ata)
+
+    # Nettoyer les colonnes
+    ata_df["ATA Chapter"] = ata_df["ATA Chapter"].astype(str).str.strip()
+    ata_df["Categories"] = ata_df["Categories"].str.strip()
+
+    # Créer les deux listes
+    ata_general = ata_df.loc[ata_df["Categories"] == "General", "ATA Chapter"].tolist()
+    ata_not_cabine = ata_df.loc[ata_df["Categories"] == "Not cabine", "ATA Chapter"].tolist()
+
 
     # 🔍 Recherche de la cellule contenant "WO Desc"
     desc_cell = None
@@ -62,6 +77,7 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
     # 🔍 Recherche des colonnes Main/Sub Category
     main_cell = None
     sub_cell = None
+    ata_cell = None
 
     for cell in ws[desc_cell.row]:
         if cell.value:
@@ -70,6 +86,8 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
                 main_cell = cell
             elif value == "sub category":
                 sub_cell = cell
+            elif value == "ata chapter":
+                ata_cell = cell
 
     col_index = desc_cell.column
     start_row = desc_cell.row + 1
@@ -109,10 +127,20 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
         
     log_fn("קתיבת של הקטגוריות ותתי קטגוריות...")
     for i, row_num in enumerate(row_indexes):
-        best = ref_keys[top_1_idx[i]]
-        cat_1, subcat_1 = best.split(" | ")
+        ata_value = ws.cell(row=row_num, column=ata_cell.column).value
+        ata_value = str(ata_value).strip() if ata_value else ""
 
-        ws.cell(row=row_num, column=main_cell.column).value = cat_1
-        ws.cell(row=row_num, column=sub_cell.column).value = subcat_1
+        if ata_value in ata_general:
+            ws.cell(row=row_num, column=main_cell.column).value = "General"
+            ws.cell(row=row_num, column=sub_cell.column).value = "General"
+        elif ata_value in ata_not_cabine:
+            ws.cell(row=row_num, column=main_cell.column).value = "Not Cabine"
+            ws.cell(row=row_num, column=sub_cell.column).value = "Not Cabine"
+        else:
+            best = ref_keys[top_1_idx[i]]
+            cat_1, subcat_1 = best.split(" | ")
+            ws.cell(row=row_num, column=main_cell.column).value = cat_1
+            ws.cell(row=row_num, column=sub_cell.column).value = subcat_1
+
 
     wb.save(file_path_takalot_file)

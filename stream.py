@@ -7,7 +7,7 @@ import os
 
 from sentence_transformers import SentenceTransformer
 from text_processing import TextProcessor
-from config import file_path_dictionnary, file_path_json, MODEL_DIR_1
+from config import file_path_dictionnary, file_path_json, file_path_ata,  MODEL_DIR_1
 from sentenceT import process_new_descriptions
 
 from data_loader import CategoryEmbeddingBuilder
@@ -106,6 +106,7 @@ if uploaded_file:
                     file_path_takalot_file=local_path,
                     embedding_model=model,
                     processor=processor,
+                    ata=file_path_ata,
                     reference_json=file_path_json,
                     log_fn=stream_log
                 )
