@@ -135,10 +135,11 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
             rows_to_classify.append(row_num)
             descriptions_to_classify.append(cleaned[i])
             index_in_cleaned.append(i)
+            
 
     # 8. Traitement des descriptions restantes
     if descriptions_to_classify:
-        log_fn(f"🧪 סיווג {len(descriptions_to_classify)} תקלות שלא הופיעו ברשימות ATA...")
+        log_fn(f"🧪 סיווג {len(descriptions_to_classify)} תקלות שלא הופיעו ברשימות ATA מתוך {len(descriptions)}")
 
         takalot_embeddings = embedding_model.encode(
             descriptions_to_classify,
@@ -156,5 +157,4 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
             ws.cell(row=row_num, column=main_cell.column).value = cat_1
             ws.cell(row=row_num, column=sub_cell.column).value = subcat_1
 
-    log_fn("💾 שמירה של הקובץ המסווג...")
     wb.save(file_path_takalot_file)

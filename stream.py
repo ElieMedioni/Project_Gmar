@@ -111,6 +111,8 @@ if uploaded_file:
                     log_fn=stream_log
                 )
 
+                log_box = st.empty()
+
                 st.markdown("<div style='text-align: right; direction: rtl; font-family: \"Segoe UI\";font-weight: bold;'>שמירת של התקלות מסווגות</div>", unsafe_allow_html=True)
                 output_dir = "Data_Cabine/Output"
                 os.makedirs(output_dir, exist_ok=True)

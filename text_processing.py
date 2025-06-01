@@ -17,30 +17,31 @@ class TextProcessor:
         return " ".join(expanded_words)
         
     def clean_text(self, text):
-        patterns_to_remove = [
+        patterns_replace_with_space = [
             r"<.>", 
             r"<strong>",
-            r"-", 
             r"</p>", 
             r"&nbsp;</p>", 
             r"\n", 
-            r",", 
             r"#", 
             r"&nbsp;",
             r"\(", 
             r"\t", 
             r"\)", 
-            r"\/", 
             r"<p>", 
-            r"\.", 
             r"\>", 
             r"\<"
         ]
         
-        combined_pattern = "|".join(patterns_to_remove)
-
-        # Appliquez en une seule fois :
-        text = re.sub(combined_pattern, " ", text).strip()
+        patterns_remove_completely = [
+            r"\/"
+    ]
+        
+        pattern_space = re.compile("|".join(patterns_replace_with_space))
+        text = pattern_space.sub(" ", text)
+        
+        pattern_remove = re.compile("|".join(patterns_remove_completely))
+        text = pattern_remove.sub("", text)
         
         # Convertir en minuscules
         text = text.lower()
