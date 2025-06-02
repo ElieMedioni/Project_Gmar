@@ -127,10 +127,10 @@ def process_new_descriptions(file_path_takalot_file, embedding_model, processor,
 
         if ata_value in ata_general:
             ws.cell(row=row_num, column=main_cell.column).value = "General"
-            ws.cell(row=row_num, column=sub_cell.column).value = "General"
+            ws.cell(row=row_num, column=sub_cell.column).value = "-"
         elif ata_value in ata_not_cabine:
             ws.cell(row=row_num, column=main_cell.column).value = "Not Cabin"
-            ws.cell(row=row_num, column=sub_cell.column).value = "Not Cabin"
+            ws.cell(row=row_num, column=sub_cell.column).value = "-"
         else:
             rows_to_classify.append(row_num)
             descriptions_to_classify.append(cleaned[i])
